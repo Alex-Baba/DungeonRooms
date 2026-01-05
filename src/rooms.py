@@ -5,8 +5,8 @@ from typing import Any, Callable, DefaultDict, Dict, List, Type, Protocol, Seque
 import random
 
 
-from src.player import Player
-from src.events import (
+from .player import Player
+from .events import (
     RoomEntered,
     DamageTaken,
     Healed,
