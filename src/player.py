@@ -16,6 +16,8 @@ from .events import (
     EventBus,
 )
 
+from .items import get_item_by_name
+
 
 @dataclass
 class Player:
@@ -36,3 +38,20 @@ class Player:
     def heal(self,amount:int, source:str, event_bus:EventBus)->None:
         self.health += amount
         event_bus.publish(Healed(amount=amount, source=source))
+
+    def add_gold(self,amount:int, source:str, event_bus:EventBus)->None:
+        self.gold += amount
+        event_bus.publish(GoldGained(amount=amount, source=source))
+
+    def add_item(self,item_name:str, source:str, event_bus:EventBus)->None:
+        self.inventory.append(item_name)
+        event_bus.publish(ItemAcquired(item_name=item_name, source=source))
+
+    def use_item(self,item_name:str, state:GameState)->bool:
+        if item_name in self.inventory:
+            item = get_item_by_name(item_name)
+            if item and item.apply(state):
+                self.inventory.remove(item_name)
+                state.bus.publish(PotionUsed(potion_name=item_name, effect="used"))
+                return True
+        return False
