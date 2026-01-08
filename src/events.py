@@ -38,6 +38,11 @@ class PotionUsed:
     potion_name: str
     effect: str
 
+@dataclass(frozen=True)
+class ItemUsed:
+    item_name: str
+    effect: str
+
 
 @dataclass(frozen=True)
 class Message:
@@ -82,30 +87,41 @@ class ConsoleLogger:
         event_bus.subscribe(Message, self.log_message)
         event_bus.subscribe(GameWon, self.log_game_won)
         event_bus.subscribe(GameLost, self.log_game_lost)
+        event_bus.subscribe(ItemUsed, self.log_item_used)
+        
 
     def log_room_entered(self, event: RoomEntered) -> None:
-        print(f"Entered room: {event.room_name}")
+        print("\n" + "=" * 34)
+        print(f"  {event.room_name}")
+        print("=" * 34)
 
     def log_damage_taken(self, event: DamageTaken) -> None:
-        print(f"Damage taken: {event.amount} from {event.source}")
+        print(f"  -{event.amount} HP   ({event.source})")
 
     def log_healed(self, event: Healed) -> None:
-        print(f"Healed: {event.amount} from {event.source}")
+        print(f"  +{event.amount} HP   ({event.source})")
 
     def log_gold_gained(self, event: GoldGained) -> None:
-        print(f"Gold gained: {event.amount} from {event.source}")
+        print(f"  +{event.amount} gold ({event.source})")
 
     def log_item_acquired(self, event: ItemAcquired) -> None:
-        print(f"Item acquired: {event.item_name} from {event.source}")
+        print(f"  + item: {event.item_name} ({event.source})")
 
     def log_potion_used(self, event: PotionUsed) -> None:
         print(f"Potion used: {event.potion_name} with effect {event.effect}")
 
     def log_message(self, event: Message) -> None:
-        print(f"Message: {event.text}")
+        print(f"  {event.text}")
 
     def log_game_won(self, event: GameWon) -> None:
-        print("Game won!")
+        print("\nYou escaped the dungeon. You win!")
 
     def log_game_lost(self, event: GameLost) -> None:
-        print(f"Game lost! Reason: {event.reason}")
+        reason = getattr(event, "reason", None)
+        if reason:
+            print(f"\nGame over: {reason}")
+        else:
+            print("\nGame over.")
+
+    def log_item_used(self, event: ItemUsed) -> None:
+        print(f"Item used: {event.item_name} with effect {event.effect}")

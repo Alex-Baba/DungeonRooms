@@ -34,12 +34,16 @@ def main() -> int:
             print("Congratulations! You have won the game!")
             break
 
-        room=state.current_room()
+        room = state.current_room()
         event_bus.publish(RoomEntered(room_name=room.name))
         event_bus.publish(Message(text=f"You are in {room.name}."))
-        event_bus.publish(Message(f"Your health: {state.player.health}, Gold: {state.player.gold}"))
+        event_bus.publish(Message(text=f"Your health: {state.player.health}, Gold: {state.player.gold}"))
 
-        actions=room.get_actions()
+        # Show monsters + HP if this room supports it
+        if hasattr(room, "monsters_status"):
+            event_bus.publish(Message(text=room.monsters_status()))
+
+        actions = room.get_actions()
         for action in actions:
             print(f"{action.key}: {action.description}")
         choice=input("Choose an action: ").strip()

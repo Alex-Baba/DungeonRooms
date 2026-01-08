@@ -55,3 +55,6 @@ class Player:
                 state.bus.publish(PotionUsed(potion_name=item_name, effect="used"))
                 return True
         return False
+
+    def see_items(self)->List[str]:
+        return self.inventory

@@ -107,12 +107,15 @@ class TreasureRoom:
     def get_actions(self)->Sequence[Action]:
         return [SimpleAction(key="open_chest", description="Open the treasure chest")]
 
-    def resolve_action(self, action_key:str, state:GameState)->None:
+    def resolve_action(self, action_key: str, state: GameState) -> None:
         if action_key == "open_chest" and not self._cleared:
-            gold_amount = self._rng.randint(50, 200)
-            state.player.gold += gold_amount
-            state.bus.publish(GoldGained(amount=gold_amount, source=self.name))
-            state.bus.publish(Message(text=f"You found {gold_amount} gold in the chest!"))
+            items = ["healing_potion", "mystery_potion", "bomb"]
+            found_item = self._rng.choice(items)
+            state.player.add_item(found_item, source=self.name, event_bus=state.bus)
+            gold_amount = self._rng.randint(10, 100)
+            state.player.add_gold(gold_amount, source=self.name, event_bus=state.bus)
+            state.bus.publish(Message(text="You open the chest."))
+
             self._cleared = True
 
     def is_cleared(self)->bool:
@@ -146,38 +149,141 @@ class TrapRoom:
         self._rng=rng
 
     def get_actions(self)->Sequence[Action]:
-        return [SimpleAction(key="disarm_trap", description="Attempt to disarm the trap")]
+        return [SimpleAction(key="disarm_trap", description="Attempt to disarm the trap"),
+        SimpleAction(key="leave", description="Leave the trap"),
+        ]
 
     def resolve_action(self, action_key:str, state:GameState)->None:
         if action_key == "disarm_trap" and not self._cleared:
-            damage_amount = self._rng.randint(15, 40)
-            state.player.take_damage(damage_amount, source=self.name, event_bus=state.bus)
-            state.bus.publish(Message(text=f"You triggered a trap and took {damage_amount} damage!"))
+            if self._rng.random() < 0.5:
+                state.bus.publish(Message(text="You successfully disarmed the trap!"))
+                found_item = self._rng.choice(["healing_potion", "mystery_potion", "bomb"])
+                state.player.add_item(found_item, source=self.name, event_bus=state.bus)
+                state.bus.publish(Message(text=f"You found a {found_item} while disarming the trap!"))
+            else:
+                damage_amount = self._rng.randint(15, 40)
+                state.player.take_damage(damage_amount, source=self.name, event_bus=state.bus)
+                state.bus.publish(Message(text=f"You triggered a trap and took {damage_amount} damage!"))
+            self._cleared = True
+        elif action_key == "leave" and not self._cleared:
+            state.bus.publish(Message(text="You chose to leave the trap alone."))
             self._cleared = True
 
     def is_cleared(self)->bool:
         return self._cleared
+
+@dataclass
+class Monster:
+    hp: int
+    attack: int
+
+    def is_dead(self) -> bool:
+        return self.hp <= 0
+
 
 class MonsterRoom:
-    name="Monster Room"
+    name = "Monster Room"
 
-    def __init__(self,rng:random.Random)->None:
-        self._cleared=False
-        self._rng=rng
+    def __init__(self, rng: random.Random) -> None:
+        self._cleared = False
+        self._rng = rng
 
-    def get_actions(self)->Sequence[Action]:
-        return [SimpleAction(key="fight_monster", description="Fight the monster")]
+        # Create 1–3 monsters so AoE items make sense
+        count = self._rng.randint(1, 3)
+        self.monsters: List[Monster] = [
+            Monster(hp=self._rng.randint(20, 35), attack=self._rng.randint(6, 12))
+            for _ in range(count)
+        ]
 
-    def resolve_action(self, action_key:str, state:GameState)->None:
-        if action_key == "fight_monster" and not self._cleared:
-            damage_amount = self._rng.randint(20, 50)
-            state.player.take_damage(damage_amount, source=self.name, event_bus=state.bus)
-            state.bus.publish(Message(text=f"You fought the monster and took {damage_amount} damage!"))
+    def _alive(self) -> List[Monster]:
+        return [m for m in self.monsters if not m.is_dead()]
+
+    def take_aoe_damage(self, amount: int, state: GameState) -> None:
+        alive = self._alive()
+        if not alive:
+            state.bus.publish(Message(text="There are no monsters to damage."))
+            return
+
+        for m in alive:
+            m.hp = max(0, m.hp - amount)
+
+        state.bus.publish(Message(text=f"The bomb explodes! All monsters take {amount} damage."))
+
+        if not self._alive():
+            state.bus.publish(Message(text="All monsters are defeated!"))
             self._cleared = True
 
-    def is_cleared(self)->bool:
+    def get_actions(self) -> Sequence[Action]:
+        return [
+            SimpleAction(key="fight_monster", description="Fight the monster"),
+            SimpleAction(key="flee", description="Flee from the monster"),
+            SimpleAction(key="use_item", description="Use an item from your inventory"),
+        ]
+
+    def resolve_action(self, action_key: str, state: GameState) -> None:
+        if self._cleared:
+            return
+
+        handlers = {
+            "fight_monster": self._handle_fight,
+            "flee": self._handle_flee,
+            "use_item": self._handle_use_item,
+        }
+
+        handler = handlers.get(action_key)
+        if handler is None:
+            state.bus.publish(Message(text="Invalid action."))
+            return
+
+        handler(state)
+
+    def _handle_fight(self, state: GameState) -> None:
+        alive = self._alive()
+        if not alive:
+            self._cleared = True
+            return
+
+        player_hit = self._rng.randint(12, 22)
+        alive[0].hp = max(0, alive[0].hp - player_hit)
+        state.bus.publish(Message(text=f"You strike a monster for {player_hit} damage."))
+
+        if not self._alive():
+            state.bus.publish(Message(text="All monsters are defeated!"))
+            self._cleared = True
+            return
+
+        total = sum(m.attack for m in self._alive())
+        state.player.take_damage(total, source=self.name, event_bus=state.bus)
+        state.bus.publish(Message(text=f"The monsters hit back for {total} total damage!"))
+
+    def _handle_flee(self, state: GameState) -> None:
+        if self._rng.random() < 0.5:
+            state.bus.publish(Message(text="You successfully fled from the monsters!"))
+        else:
+            damage_amount = self._rng.randint(10, 30)
+            state.player.take_damage(damage_amount, source=self.name, event_bus=state.bus)
+            state.bus.publish(Message(text=f"You failed to flee and took {damage_amount} damage!"))
+        self._cleared = True
+
+    def _handle_use_item(self, state: GameState) -> None:
+        if not state.player.inventory:
+            state.bus.publish(Message(text="Your inventory is empty."))
+            return
+
+        state.bus.publish(Message(text=f"Your inventory: {', '.join(state.player.see_items())}"))
+        item_name = input("Enter the name of the item to use: ").strip()
+        if state.player.use_item(item_name, state):
+            state.bus.publish(Message(text=f"You used {item_name} successfully!"))
+
+    def is_cleared(self) -> bool:
         return self._cleared
 
+    def monsters_status(self) -> str:
+        alive = self._alive()
+        if not alive:
+            return "Monsters: none"
+        hps = ", ".join(str(m.hp) for m in alive)
+        return f"Monsters: {len(alive)} alive | HP: [{hps}]"
 
 class RoomFactory:
     """Factory to create rooms for the dungeon."""
