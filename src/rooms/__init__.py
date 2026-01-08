@@ -6,6 +6,7 @@ from .rest_room import RestRoom
 from .trap_room import TrapRoom
 from .monster_room import MonsterRoom
 from .boss_room import BossRoom
+from .shop_room import ShopRoom
 from ..monsters import Monster
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "RestRoom",
     "TrapRoom",
     "MonsterRoom",
+    "ShopRoom",
     "BossRoom",
     "Monster",
 ]

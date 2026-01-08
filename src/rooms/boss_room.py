@@ -16,11 +16,23 @@ class BossRoom:
         self._rng = rng
         boss_creators = [create_slime_boss, create_goblin_boss, create_wolf_boss]
         self.boss = rng.choice(boss_creators)(rng)
+        self._enraged = False
+        self._enrage_threshold = max(15, self.boss.hp // 3)
+        self._enrage_bonus_attack = 5
+
+    def _check_enrage(self, state) -> None:
+        if self._enraged or self.boss.is_dead():
+            return
+        if self.boss.hp <= self._enrage_threshold:
+            self._enraged = True
+            self.boss.attack += self._enrage_bonus_attack
+            state.bus.publish(Message(text=f"{self.boss.name} becomes ENRAGED!"))
 
     def boss_status(self) -> str:
         if self.boss.is_dead():
             return "Boss: defeated"
-        return f"Boss: {self.boss.name} ({self.boss.hp} HP)"
+        enraged_text = " ENRAGED" if self._enraged else ""
+        return f"Boss: {self.boss.name} ({self.boss.hp} HP){enraged_text}"
 
     def take_aoe_damage(self, amount: int, state) -> None:
         if self.boss.is_dead():
@@ -29,6 +41,8 @@ class BossRoom:
 
         self.boss.hp = max(0, self.boss.hp - amount)
         state.bus.publish(Message(text=f"The explosion hits the boss for {amount} damage!"))
+
+        self._check_enrage(state)
 
         if self.boss.is_dead():
             state.bus.publish(Message(text="The boss has been defeated!"))
@@ -64,13 +78,16 @@ class BossRoom:
         self.boss.hp = max(0, self.boss.hp - player_hit)
         state.bus.publish(Message(text=f"You strike the boss for {player_hit} damage."))
 
+        self._check_enrage(state)
+
         if self.boss.is_dead():
             state.bus.publish(Message(text="The boss has been defeated!"))
             self._cleared = True
             return
 
-        state.player.take_damage(self.boss.attack, source=self.name, event_bus=state.bus)
-        state.bus.publish(Message(text=f"The boss hits back for {self.boss.attack} damage!"))
+        damage = self.boss.attack
+        state.player.take_damage(damage, source=self.name, event_bus=state.bus)
+        state.bus.publish(Message(text=f"The boss hits back for {damage} damage!"))
 
     def _handle_use_item(self, state) -> None:
         if not state.player.inventory:

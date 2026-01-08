@@ -76,7 +76,7 @@ def _publish_room_info(event_bus: EventBus, state: GameState, room) -> None:
     event_bus.publish(Message(text=f"You are in {room.name}."))
     event_bus.publish(Message(text=f"Your health: {state.player.health}, Gold: {state.player.gold}"))
 
-    for status_attr in ("monsters_status", "boss_status"):
+    for status_attr in ("monsters_status", "boss_status", "shop_status"):
         status_fn = getattr(room, status_attr, None)
         if callable(status_fn):
             event_bus.publish(Message(text=status_fn()))
