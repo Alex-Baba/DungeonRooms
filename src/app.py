@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 import argparse
 
-from .rooms import GameState, Room, generate_dungeon, RoomFactory
+from .dungeon import GameState, generate_dungeon, RoomFactory
 from .player import Player
-from .events import EventBus, Message, GameWon, ConsoleLogger, RoomEntered
+from .events import EventBus, Message, ConsoleLogger, RoomEntered
 
 
 def main() -> int:
@@ -27,11 +27,11 @@ def main() -> int:
 
     while True:
         if state.player.is_dead():
-            print("You have perished. Game over.")
+            #print("You have perished. Game over.")
             break
 
         if state.won:
-            print("Congratulations! You have won the game!")
+            #print("Congratulations! You have won the game!")
             break
 
         room = state.current_room()

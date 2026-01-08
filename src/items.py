@@ -6,7 +6,7 @@ from typing import Dict, Optional, Protocol, TYPE_CHECKING
 from .events import Message
 
 if TYPE_CHECKING:
-    from .rooms import GameState
+    from .dungeon import GameState
 
 
 class Item(Protocol):

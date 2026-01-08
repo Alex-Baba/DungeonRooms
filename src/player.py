@@ -1,22 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, DefaultDict, Dict, List, Type
+from typing import List, TYPE_CHECKING
 
-from .events import (
-    RoomEntered,
-    DamageTaken,
-    Healed,
-    GoldGained,
-    ItemAcquired,
-    PotionUsed,
-    Message,
-    GameWon,
-    GameLost,
-    EventBus,
-)
+from .events import DamageTaken, EventBus, GameLost, GoldGained, Healed, ItemAcquired, PotionUsed
 
 from .items import get_item_by_name
+
+if TYPE_CHECKING:
+    from .dungeon import GameState
 
 
 @dataclass
@@ -47,7 +39,7 @@ class Player:
         self.inventory.append(item_name)
         event_bus.publish(ItemAcquired(item_name=item_name, source=source))
 
-    def use_item(self,item_name:str, state:GameState)->bool:
+    def use_item(self, item_name: str, state: GameState) -> bool:
         if item_name in self.inventory:
             item = get_item_by_name(item_name)
             if item and item.apply(state):
