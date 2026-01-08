@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import List, Sequence
 import random
 
 from .base import Action, SimpleAction
 from ..events import Message
-
-
-@dataclass
-class Monster:
-    hp: int
-    attack: int
-
-    def is_dead(self) -> bool:
-        return self.hp <= 0
-
+from ..monsters import Monster, create_goblin, create_slime,create_wolf
 
 class MonsterRoom:
     name = "Monster Room"
@@ -25,10 +15,8 @@ class MonsterRoom:
         self._rng = rng
 
         count = self._rng.randint(1, 3)
-        self.monsters: List[Monster] = [
-            Monster(hp=self._rng.randint(20, 35), attack=self._rng.randint(6, 12))
-            for _ in range(count)
-        ]
+        creators = [create_goblin, create_slime, create_wolf]
+        self.monsters: List[Monster] = [self._rng.choice(creators)(self._rng) for _ in range(count)]
 
     def _alive(self) -> List[Monster]:
         return [m for m in self.monsters if not m.is_dead()]
@@ -37,8 +25,8 @@ class MonsterRoom:
         alive = self._alive()
         if not alive:
             return "Monsters: none"
-        hps = ", ".join(str(m.hp) for m in alive)
-        return f"Monsters: {len(alive)} alive | HP: [{hps}]"
+        summary = ", ".join(f"{i + 1}:{m.name}({m.hp} HP)" for i, m in enumerate(alive))
+        return f"Monsters: {len(alive)} alive | {summary}"
 
     def take_aoe_damage(self, amount: int, state) -> None:
         alive = self._alive()
@@ -56,18 +44,34 @@ class MonsterRoom:
             self._cleared = True
 
     def get_actions(self) -> Sequence[Action]:
-        return [
-            SimpleAction(key="fight_monster", description="Fight the monster"),
-            SimpleAction(key="flee", description="Flee from the monster"),
-            SimpleAction(key="use_item", description="Use an item from your inventory"),
-        ]
+        actions: List[Action] = []
+
+        alive = self._alive()
+        for i, monster in enumerate(alive, start=1):
+            actions.append(
+                SimpleAction(
+                    key=f"attack_{i}",
+                    description=f"Attack {monster.name} (HP: {monster.hp})",
+                )
+            )
+        actions.append(SimpleAction(key="flee", description="Flee from the monsters"))
+        actions.append(SimpleAction(key="use_item", description="Use an item from your inventory"))
+        return actions
 
     def resolve_action(self, action_key: str, state) -> None:
         if self._cleared:
             return
 
+        if action_key.startswith("attack_"):
+            suffix = action_key.removeprefix("attack_")
+            if not suffix.isdigit():
+                state.bus.publish(Message(text="Invalid attack target."))
+                return
+            target_index = int(suffix) - 1
+            self._handle_attack(state, target_index)
+            return
+
         handlers = {
-            "fight_monster": self._handle_fight,
             "flee": self._handle_flee,
             "use_item": self._handle_use_item,
         }
@@ -79,15 +83,20 @@ class MonsterRoom:
 
         handler(state)
 
-    def _handle_fight(self, state) -> None:
+    def _handle_attack(self, state, target_index: int) -> None:
         alive = self._alive()
         if not alive:
             self._cleared = True
             return
 
+        if target_index < 0 or target_index >= len(alive):
+            state.bus.publish(Message(text="That monster target does not exist."))
+            return
+
         player_hit = self._rng.randint(12, 22)
-        alive[0].hp = max(0, alive[0].hp - player_hit)
-        state.bus.publish(Message(text=f"You strike a monster for {player_hit} damage."))
+        target = alive[target_index]
+        target.hp = max(0, target.hp - player_hit)
+        state.bus.publish(Message(text=f"You strike the {target.name} for {player_hit} damage."))
 
         if not self._alive():
             state.bus.publish(Message(text="All monsters are defeated!"))

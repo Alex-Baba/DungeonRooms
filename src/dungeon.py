@@ -7,7 +7,7 @@ import random
 from .player import Player
 from .events import EventBus
 from .rooms.base import Room
-from .rooms import ExitRoom, MonsterRoom, RestRoom, StartRoom, TrapRoom, TreasureRoom
+from .rooms import BossRoom, ExitRoom, MonsterRoom, RestRoom, StartRoom, TrapRoom, TreasureRoom
 
 
 @dataclass
@@ -42,6 +42,8 @@ class RoomFactory:
             return TrapRoom(rng)
         if room_type == "monster":
             return MonsterRoom(rng)
+        if room_type == "boss":
+            return BossRoom(rng)
         raise ValueError(f"Unknown room type: {room_type}")
 
 
@@ -53,5 +55,6 @@ def generate_dungeon(rng: random.Random, room_factory: RoomFactory, middle_rooms
     for _ in range(middle_rooms):
         room_type = rng.choices(room_types, weights=weights, k=1)[0]
         rooms.append(room_factory.create_room(room_type, rng))
+    rooms.append(room_factory.create_room("boss", rng))
     rooms.append(ExitRoom())
     return rooms

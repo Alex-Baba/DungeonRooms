@@ -4,7 +4,9 @@ from .exit_room import ExitRoom
 from .treasure_room import TreasureRoom
 from .rest_room import RestRoom
 from .trap_room import TrapRoom
-from .monster_room import MonsterRoom, Monster
+from .monster_room import MonsterRoom
+from .boss_room import BossRoom
+from ..monsters import Monster
 
 __all__ = [
     "Action",
@@ -16,5 +18,6 @@ __all__ = [
     "RestRoom",
     "TrapRoom",
     "MonsterRoom",
+    "BossRoom",
     "Monster",
 ]
