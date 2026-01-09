@@ -1,1 +1,88 @@
-Dungeon rooms project with design patterns
+Dungeon Rooms (CLI Game)
+
+This is a small replayable dungeon game played in the terminal.
+The dungeon is a sequence of rooms (Start -> random rooms -> Shop -> Boss -> Exit).
+
+
+How to run
+
+1) Install dependencies
+
+	pip install -r requirements.txt
+
+2) Run the game
+
+Run as a module from the project root:
+	python -m src.app --seed 5 --rooms 6
+
+Arguments:
+	--seed  Optional. Sets the RNG seed for reproducible runs.
+	--rooms Number of random middle rooms before the Shop/Boss/Exit.
+
+
+Design patterns used
+
+1) Factory Method (Room creation)
+
+What problem it solves:
+	Dungeon generation chooses room types dynamically (random choice). Without a factory, the generator would need to directly know and construct every concrete room class.
+
+Why it is used:
+	To centralize object creation and keep dungeon generation simple and extensible.
+
+Where it is used:
+	- src/core/dungeon.py
+		- RoomFactory.create_room(room_type, rng)
+		- generate_dungeon(...) calls the factory to build the room list
+
+
+2) Observer (Publish/Subscribe via EventBus)
+
+What problem it solves:
+	Prevents gameplay code (rooms/player) from depending on console printing directly.
+	Without this, output concerns would be mixed into game logic everywhere.
+
+Why it is used:
+	To decouple "something happened" (damage, gold, room entered) from "how we react" (printing/logging).
+	This also makes it easy to add more observers later.
+
+Where it is used:
+	- src/events/event_bus.py
+		- EventBus.subscribe(event_type, handler)
+		- EventBus.publish(event)
+	- src/events/console_logger.py
+		- ConsoleLogger subscribes and reacts to events
+	- Events are published throughout the game, for example:
+		- src/app.py publishes RoomEntered and Message when entering a room
+		- src/core/player.py publishes DamageTaken, Healed, GoldGained, ItemAcquired, GameLost
+		- src/rooms/* publish Message and GameWon depending on outcomes
+
+
+Supporting patterns (used in a simple way)
+
+3) Registry (Item lookup)
+
+What problem it solves:
+	The player inventory stores item ids (strings). We need a consistent way to map an id to an item
+	implementation without a long if/elif chain.
+
+Why it is used:
+	To centralize item definitions and keep item lookup simple.
+
+Where it is used:
+	- src/items/registry.py
+		- ITEMS dict
+		- get_item_by_name(name)
+
+
+4) Factory functions (Monster creation)
+
+What problem it solves:
+	Rooms need to spawn different monsters without embedding monster construction details everywhere.
+
+Why it is used:
+	To keep monster creation small and reusable, and to make it easy to add new monster types.
+
+Where it is used:
+	- src/monsters/* (creator functions) and exports in src/monsters/__init__.py
+	- Used by src/rooms/monster_room.py and src/rooms/boss_room.py
