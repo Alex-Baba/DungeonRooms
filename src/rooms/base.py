@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Protocol, Sequence, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..dungeon import GameState
+    from ..core.dungeon import GameState
 
 
 class Action(Protocol):

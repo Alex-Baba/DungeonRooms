@@ -5,9 +5,8 @@ import argparse
 
 try:
     # Preferred: run as a package module: `python -m src.app`
-    from .dungeon import GameState, generate_dungeon, RoomFactory
-    from .player import Player
-    from .events import EventBus, Message, ConsoleLogger, RoomEntered
+    from .core import GameState, Player, generate_dungeon, RoomFactory
+    from .events import ConsoleLogger, EventBus, Message, RoomEntered
 except ImportError:  # pragma: no cover
     # Fallback: allow running the file directly: `python src/app.py`
     from pathlib import Path
@@ -15,9 +14,8 @@ except ImportError:  # pragma: no cover
 
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-    from src.dungeon import GameState, generate_dungeon, RoomFactory
-    from src.player import Player
-    from src.events import EventBus, Message, ConsoleLogger, RoomEntered
+    from src.core import GameState, Player, generate_dungeon, RoomFactory
+    from src.events import ConsoleLogger, EventBus, Message, RoomEntered
 
 
 def _parse_args() -> argparse.Namespace:

@@ -1,82 +1,23 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Type
-
-
-@dataclass(frozen=True)
-class RoomEntered:
-    room_name: str
-
-
-@dataclass(frozen=True)
-class DamageTaken:
-    amount: int
-    source: str
-
-
-@dataclass(frozen=True)
-class Healed:
-    amount: int
-    source: str
-
-
-@dataclass(frozen=True)
-class GoldGained:
-    amount: int
-    source: str = "unknown"
-
-
-@dataclass(frozen=True)
-class ItemAcquired:
-    item_name: str
-    source: str
-
-
-@dataclass(frozen=True)
-class PotionUsed:
-    potion_name: str
-    effect: str
-
-@dataclass(frozen=True)
-class ItemUsed:
-    item_name: str
-    effect: str
-
-
-@dataclass(frozen=True)
-class Message:
-    text: str
-
-
-@dataclass(frozen=True)
-class GameWon:
-    pass
-
-
-@dataclass(frozen=True)
-class GameLost:
-    reason: str = "unknown"
-
-
-EventHandler = Callable[[Any], None]
-
-
-class EventBus:
-    """A simple event bus for managing event subscriptions and dispatching events."""
-    def __init__(self) -> None:
-        self._subs: Dict[Type[Any], List[EventHandler]] = {}
-
-    def subscribe(self, event_type: Type[Any], handler: EventHandler) -> None:
-        self._subs.setdefault(event_type, []).append(handler)
-
-    def publish(self, event: Any) -> None:
-        for handler in self._subs.get(type(event), []):
-            handler(event)
+from .event_bus import EventBus
+from .types import (
+    DamageTaken,
+    GameLost,
+    GameWon,
+    GoldGained,
+    Healed,
+    ItemAcquired,
+    ItemUsed,
+    Message,
+    PotionUsed,
+    RoomEntered,
+)
 
 
 class ConsoleLogger:
     """Logs events to the console."""
+
     def __init__(self, event_bus: EventBus) -> None:
         event_bus.subscribe(RoomEntered, self.log_room_entered)
         event_bus.subscribe(DamageTaken, self.log_damage_taken)
@@ -84,11 +25,10 @@ class ConsoleLogger:
         event_bus.subscribe(GoldGained, self.log_gold_gained)
         event_bus.subscribe(ItemAcquired, self.log_item_acquired)
         event_bus.subscribe(PotionUsed, self.log_potion_used)
+        event_bus.subscribe(ItemUsed, self.log_item_used)
         event_bus.subscribe(Message, self.log_message)
         event_bus.subscribe(GameWon, self.log_game_won)
         event_bus.subscribe(GameLost, self.log_game_lost)
-        event_bus.subscribe(ItemUsed, self.log_item_used)
-        
 
     def log_room_entered(self, event: RoomEntered) -> None:
         print("\n" + "=" * 34)
@@ -110,6 +50,9 @@ class ConsoleLogger:
     def log_potion_used(self, event: PotionUsed) -> None:
         print(f"Potion used: {event.potion_name} with effect {event.effect}")
 
+    def log_item_used(self, event: ItemUsed) -> None:
+        print(f"Item used: {event.item_name} with effect {event.effect}")
+
     def log_message(self, event: Message) -> None:
         print(f"  {event.text}")
 
@@ -122,6 +65,3 @@ class ConsoleLogger:
             print(f"\nGame over: {reason}")
         else:
             print("\nGame over.")
-
-    def log_item_used(self, event: ItemUsed) -> None:
-        print(f"Item used: {event.item_name} with effect {event.effect}")

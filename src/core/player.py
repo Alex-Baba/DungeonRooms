@@ -3,9 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, TYPE_CHECKING
 
-from .events import DamageTaken, EventBus, GameLost, GoldGained, Healed, ItemAcquired, PotionUsed
-
-from .items import get_item_by_name
+from ..events import DamageTaken, EventBus, GameLost, GoldGained, Healed, ItemAcquired, PotionUsed
+from ..items import get_item_by_name
 
 if TYPE_CHECKING:
     from .dungeon import GameState
@@ -21,21 +20,21 @@ class Player:
     def is_dead(self) -> bool:
         return self.health <= 0
 
-    def take_damage(self,amount:int, source:str, event_bus:EventBus)->None:
+    def take_damage(self, amount: int, source: str, event_bus: EventBus) -> None:
         self.health -= amount
         event_bus.publish(DamageTaken(amount=amount, source=source))
         if self.is_dead():
             event_bus.publish(GameLost(reason=f"{self.name} has died."))
 
-    def heal(self,amount:int, source:str, event_bus:EventBus)->None:
+    def heal(self, amount: int, source: str, event_bus: EventBus) -> None:
         self.health += amount
         event_bus.publish(Healed(amount=amount, source=source))
 
-    def add_gold(self,amount:int, source:str, event_bus:EventBus)->None:
+    def add_gold(self, amount: int, source: str, event_bus: EventBus) -> None:
         self.gold += amount
         event_bus.publish(GoldGained(amount=amount, source=source))
 
-    def add_item(self,item_name:str, source:str, event_bus:EventBus)->None:
+    def add_item(self, item_name: str, source: str, event_bus: EventBus) -> None:
         self.inventory.append(item_name)
         event_bus.publish(ItemAcquired(item_name=item_name, source=source))
 
@@ -48,5 +47,5 @@ class Player:
                 return True
         return False
 
-    def see_items(self)->List[str]:
+    def see_items(self) -> List[str]:
         return self.inventory

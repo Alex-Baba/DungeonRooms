@@ -5,9 +5,9 @@ from typing import List
 import random
 
 from .player import Player
-from .events import EventBus
-from .rooms.base import Room
-from .rooms import BossRoom, ExitRoom, MonsterRoom, RestRoom, ShopRoom, StartRoom, TrapRoom, TreasureRoom
+from ..events import EventBus
+from ..rooms.base import Room
+from ..rooms import BossRoom, ExitRoom, MonsterRoom, RestRoom, ShopRoom, StartRoom, TrapRoom, TreasureRoom
 
 
 @dataclass
